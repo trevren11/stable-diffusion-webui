@@ -190,5 +190,8 @@ if __name__ == "__main__":
         run_extras=wrap_gradio_gpu_call(run_extras),
         run_pnginfo=run_pnginfo
     )
-
-    demo.launch(share=cmd_opts.share, server_name="0.0.0.0" if cmd_opts.listen else None)
+    print("IS IT WORKING")
+    print(cmd_opts.share)
+    print(cmd_opts.listen)
+    demo.launch(share=True, server_name="0.0.0.0" if True else None)
+    # demo.launch(share=cmd_opts.share, server_name="0.0.0.0" if cmd_opts.listen else None)

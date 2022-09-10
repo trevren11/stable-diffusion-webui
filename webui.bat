@@ -2,7 +2,7 @@
 
 set PYTHON=python
 set GIT=git
-set COMMANDLINE_ARGS=
+set COMMANDLINE_ARGS=--opt-split-attention
 set VENV_DIR=venv
 
 mkdir tmp 2>NUL

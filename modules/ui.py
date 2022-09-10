@@ -138,6 +138,12 @@ def wrap_gradio_call(func):
 
     return f
 
+def increment_seed(seed: int, batch_count: int):
+    return seed + batch_count
+
+def random_seed(seed: int):
+    return random.randint(-2147483648, 2147483647)
+
 
 def check_progress_call():
 
@@ -203,7 +209,7 @@ def create_ui(txt2img, img2img, run_extras, run_pnginfo):
 
         with gr.Row().style(equal_height=False):
             with gr.Column(variant='panel'):
-                steps = gr.Slider(minimum=1, maximum=150, step=1, label="Sampling Steps", value=20)
+                steps = gr.Slider(minimum=1, maximum=250, step=1, label="Sampling Steps", value=80)
                 sampler_index = gr.Radio(label='Sampling method', elem_id="txt2img_sampling", choices=[x.name for x in samplers], value=samplers[0].name, type="index")
 
                 with gr.Row():
@@ -211,16 +217,20 @@ def create_ui(txt2img, img2img, run_extras, run_pnginfo):
                     tiling = gr.Checkbox(label='Tiling', value=False)
 
                 with gr.Row():
-                    batch_count = gr.Slider(minimum=1, maximum=cmd_opts.max_batch_count, step=1, label='Batch count', value=1)
+                    batch_count = gr.Slider(minimum=1, maximum=32, step=1, label='Batch count', value=1)
                     batch_size = gr.Slider(minimum=1, maximum=8, step=1, label='Batch size', value=1)
 
                 cfg_scale = gr.Slider(minimum=1.0, maximum=15.0, step=0.5, label='CFG Scale', value=7.0)
 
                 with gr.Group():
-                    height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=512)
-                    width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=512)
+                    height = gr.Slider(minimum=64, maximum=4096, step=32, label="Height", value=512)
+                    width = gr.Slider(minimum=64, maximum=4096, step=32, label="Width", value=512)
+                    
+                with gr.Group():
+                    seed = gr.Number(label='Seed', value=1)
+                    increment_seed_button = gr.Button('Increment', elem_id="txt2img_increment", visible=True)
+                    random_seed_button = gr.Button('Generate Random Seed', elem_id="txt2img_random", visible=True)
 
-                seed = gr.Number(label='Seed', value=-1)
 
                 with gr.Group():
                     custom_inputs = modules.scripts.scripts_txt2img.setup_ui(is_img2img=False)
@@ -244,7 +254,6 @@ def create_ui(txt2img, img2img, run_extras, run_pnginfo):
                 with gr.Group():
                     html_info = gr.HTML()
                     generation_info = gr.Textbox(visible=False)
-
 
             txt2img_args = dict(
                 fn=txt2img,
@@ -272,6 +281,20 @@ def create_ui(txt2img, img2img, run_extras, run_pnginfo):
 
             prompt.submit(**txt2img_args)
             submit.click(**txt2img_args)
+
+            increment_seed_button.click(
+                fn=increment_seed,
+                show_progress=False,
+                inputs=[seed, batch_count],
+                outputs=[seed],
+            )
+
+            random_seed_button.click(
+                fn=random_seed,
+                show_progress=False,
+                inputs=[seed],
+                outputs=[seed],
+            )
 
             check_progress.click(
                 fn=check_progress_call,
@@ -326,7 +349,7 @@ def create_ui(txt2img, img2img, run_extras, run_pnginfo):
                     init_img_with_mask = gr.Image(label="Image for inpainting with mask", elem_id="img2maskimg", source="upload", interactive=True, type="pil", tool="sketch", visible=False)
                     resize_mode = gr.Radio(label="Resize mode", show_label=False, choices=["Just resize", "Crop and resize", "Resize and fill"], type="index", value="Just resize")
 
-                steps = gr.Slider(minimum=1, maximum=150, step=1, label="Sampling Steps", value=20)
+                steps = gr.Slider(minimum=1, maximum=150, step=1, label="Sampling Steps", value=80)
                 sampler_index = gr.Radio(label='Sampling method', choices=[x.name for x in samplers_for_img2img], value=samplers_for_img2img[0].name, type="index")
                 mask_blur = gr.Slider(label='Mask blur', minimum=0, maximum=64, step=1, value=4, visible=False)
                 inpainting_fill = gr.Radio(label='Masked content', choices=['fill', 'original', 'latent noise', 'latent nothing'], value='fill', type="index", visible=False)
@@ -344,7 +367,7 @@ def create_ui(txt2img, img2img, run_extras, run_pnginfo):
                     sd_upscale_upscaler_name = gr.Radio(label='Upscaler', choices=[x.name for x in shared.sd_upscalers], value=shared.sd_upscalers[0].name, type="index", visible=False)
 
                 with gr.Row():
-                    batch_count = gr.Slider(minimum=1, maximum=cmd_opts.max_batch_count, step=1, label='Batch count', value=1)
+                    batch_count = gr.Slider(minimum=1, maximum=32, step=1, label='Batch count', value=1)
                     batch_size = gr.Slider(minimum=1, maximum=8, step=1, label='Batch size', value=1)
 
                 with gr.Group():
@@ -352,10 +375,10 @@ def create_ui(txt2img, img2img, run_extras, run_pnginfo):
                     denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising Strength', value=0.75)
 
                 with gr.Group():
-                    height = gr.Slider(minimum=64, maximum=2048, step=64, label="Height", value=512)
-                    width = gr.Slider(minimum=64, maximum=2048, step=64, label="Width", value=512)
+                    height = gr.Slider(minimum=64, maximum=4096, step=32, label="Height", value=512)
+                    width = gr.Slider(minimum=64, maximum=4096, step=32, label="Width", value=512)
 
-                seed = gr.Number(label='Seed', value=-1)
+                seed = gr.Number(label='Seed', value=1)
 
                 with gr.Group():
                     custom_inputs = modules.scripts.scripts_img2img.setup_ui(is_img2img=True)
@@ -512,7 +535,7 @@ def create_ui(txt2img, img2img, run_extras, run_pnginfo):
                 with gr.Group():
                     image = gr.Image(label="Source", source="upload", interactive=True, type="pil")
 
-                upscaling_resize = gr.Slider(minimum=1.0, maximum=4.0, step=0.05, label="Resize", value=2)
+                upscaling_resize = gr.Slider(minimum=1.0, maximum=8.0, step=0.2, label="Resize", value=4)
 
                 with gr.Group():
                     extras_upscaler_1 = gr.Radio(label='Upscaler 1', choices=[x.name for x in shared.sd_upscalers], value=shared.sd_upscalers[0].name, type="index")
